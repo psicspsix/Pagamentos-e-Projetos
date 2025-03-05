@@ -145,13 +145,15 @@
             background: none;
             border: none;
             color: #e0e0e0;
-            margin-right: 10px;
+            margin: 0 10px 0 0; /* Margem consistente */
+            flex-shrink: 0; /* Impede variação */
         }
         .expand-placeholder {
             width: 20px; /* Mesmo tamanho que o botão */
             height: 20px;
-            margin-right: 10px;
+            margin: 0 10px 0 0; /* Margem consistente */
             display: inline-block;
+            flex-shrink: 0; /* Impede variação */
         }
         .task-row input[type="checkbox"] {
             width: 18px; /* Tamanho fixo para todos os checkboxes */
@@ -653,6 +655,14 @@
 
         // Vincula o evento ao botão de ação
         document.getElementById('actionButton').addEventListener('click', saveTask);
+
+        // Adiciona evento de "Enter" no campo de texto
+        document.getElementById('taskInput').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Evita quebra de linha no input
+                saveTask(); // Chama a função de salvar
+            }
+        });
     </script>
 </body>
 </html>
