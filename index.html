@@ -131,7 +131,7 @@
             color: #ff0000; /* Vermelho para dois dias ou mais anteriores */
         }
         .subtask {
-            margin-left: 120px; /* Indentação de cerca de 12 espaços para subtarefas */
+            margin-left: 60px; /* Indentação de cerca de 6 espaços para subtarefas */
             background: #3a3a3a; /* Cor ligeiramente diferente para destacar */
         }
         .expand-btn {
@@ -140,9 +140,15 @@
             cursor: pointer;
             width: 40px; /* Espaço fixo para o botão */
             text-align: center;
+            margin-right: 10px; /* Garante espaçamento consistente */
         }
         .expand-placeholder {
             width: 40px; /* Espaço reservado quando não há botão */
+            margin-right: 10px; /* Garante espaçamento consistente */
+        }
+        .task-row input[type="checkbox"] {
+            margin-left: 0; /* Remove margem padrão do checkbox */
+            width: 20px; /* Tamanho fixo para alinhamento */
         }
         .subtasks-container {
             display: none; /* Inicialmente oculto */
