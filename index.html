@@ -136,19 +136,27 @@
         }
         .expand-btn {
             font-size: 18px;
-            padding: 5px 10px;
-            cursor: pointer;
+            padding: 0; /* Remove padding padrão */
+            margin: 0 10px 0 0; /* Margem apenas à direita */
             width: 40px; /* Espaço fixo para o botão */
+            height: 40px; /* Altura fixa para consistência */
+            line-height: 40px; /* Centraliza o texto verticalmente */
             text-align: center;
-            margin-right: 10px; /* Garante espaçamento consistente */
+            cursor: pointer;
+            background: none; /* Remove fundo para consistência */
+            border: none; /* Remove borda para evitar diferenças */
+            box-sizing: border-box;
         }
         .expand-placeholder {
             width: 40px; /* Espaço reservado quando não há botão */
-            margin-right: 10px; /* Garante espaçamento consistente */
+            height: 40px; /* Altura fixa para consistência */
+            margin: 0 10px 0 0; /* Margem apenas à direita */
+            display: inline-block; /* Garante comportamento como bloco */
         }
         .task-row input[type="checkbox"] {
-            margin-left: 0; /* Remove margem padrão do checkbox */
+            margin: 0; /* Remove margem padrão do checkbox */
             width: 20px; /* Tamanho fixo para alinhamento */
+            height: 20px; /* Altura fixa para consistência */
         }
         .subtasks-container {
             display: none; /* Inicialmente oculto */
