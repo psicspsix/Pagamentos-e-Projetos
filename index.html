@@ -180,7 +180,7 @@
             <button id="allBtn">Todos</button>
         </div>
     </div>
-    <input type="text" id="taskInput" placeholder="Digite uma tarefa">
+    <input type="text" id="taskInput" placeholder="Digite uma tarefa ou subtarefa">
     <input type="date" id="dueDate" placeholder="Data de término (opcional)">
     <input type="number" id="priority" min="1" max="1000" placeholder="Prioridade (1-1000)">
     <button id="actionButton">Adicionar</button>
@@ -207,12 +207,13 @@
         const db = getDatabase(app);
         const tasksRef = ref(db, 'tasks');
         let editingTaskKey = null;
+        let editingSubtask = null; // { parentKey, index } para subtarefas
         let currentCategory = 'payments'; // Padrão ao entrar
         let expandedTasks = {}; // Armazena o estado de expansão/colapso
 
         console.log("Firebase conectado com sucesso!");
 
-        // Função para salvar ou atualizar tarefa
+        // Função para salvar ou atualizar tarefa/subtarefa
         function saveTask() {
             const taskInput = document.getElementById('taskInput');
             const dueDateInput = document.getElementById('dueDate');
@@ -226,7 +227,30 @@
                 return;
             }
 
-            if (editingTaskKey) {
+            if (editingSubtask) {
+                // Editando uma subtarefa
+                const { parentKey, index } = editingSubtask;
+                const taskRef = ref(db, `tasks/${parentKey}`);
+                onValue(taskRef, (snapshot) => {
+                    const task = snapshot.val();
+                    const subtasks = task.subtasks || [];
+                    subtasks[index] = {
+                        text: taskText,
+                        dueDate: dueDate,
+                        priority: Math.min(Math.max(priority, 1), 1000),
+                        notes: subtasks[index].notes || "",
+                        completed: subtasks[index].completed || false
+                    };
+                    update(taskRef, { subtasks }).then(() => {
+                        resetForm();
+                        document.getElementById('success').textContent = "Subtarefa atualizada com sucesso!";
+                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                    }).catch((error) => {
+                        document.getElementById('error').textContent = "Erro ao atualizar subtarefa: " + error.message;
+                    });
+                }, { onlyOnce: true });
+            } else if (editingTaskKey) {
+                // Editando uma tarefa principal
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
                     const currentTask = snapshot.val();
@@ -247,6 +271,7 @@
                     });
                 }, { onlyOnce: true });
             } else {
+                // Adicionando uma nova tarefa principal
                 push(tasksRef, {
                     text: taskText,
                     dueDate: dueDate,
@@ -273,9 +298,10 @@
             document.getElementById('actionButton').textContent = 'Adicionar';
             document.getElementById('error').textContent = '';
             editingTaskKey = null;
+            editingSubtask = null;
         }
 
-        // Função para editar tarefa e rolar para o topo
+        // Função para editar tarefa principal
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
             onValue(taskRef, (snapshot) => {
@@ -285,35 +311,35 @@
                 document.getElementById('priority').value = task.priority;
                 document.getElementById('actionButton').textContent = 'Salvar';
                 editingTaskKey = key;
-                // Rola para o topo da página
+                editingSubtask = null; // Garante que não estamos editando uma subtarefa
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }, { onlyOnce: true });
         }
 
         // Função para adicionar subtarefa
         function addSubtask(parentKey) {
-            const subtaskText = prompt("Digite o texto da subtarefa:");
-            if (!subtaskText || subtaskText.trim() === '') {
-                document.getElementById('error').textContent = "Preencha a subtarefa!";
-                return;
-            }
+            document.getElementById('taskInput').value = '';
+            document.getElementById('dueDate').value = '';
+            document.getElementById('priority').value = '';
+            document.getElementById('actionButton').textContent = 'Adicionar Subtarefa';
+            editingTaskKey = parentKey; // Indica que estamos adicionando uma subtarefa a esta tarefa
+            editingSubtask = null; // Não estamos editando, apenas adicionando
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
 
+        // Função para editar subtarefa
+        function editSubtask(parentKey, subtaskIndex) {
             const taskRef = ref(db, `tasks/${parentKey}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
-                const newSubtask = {
-                    text: subtaskText.trim(),
-                    completed: false,
-                    notes: ""
-                };
-                const subtasks = task.subtasks || [];
-                subtasks.push(newSubtask);
-                update(taskRef, { subtasks }).then(() => {
-                    document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                    setTimeout(() => document.getElementById('success').textContent = '', 2000);
-                }).catch((error) => {
-                    document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
-                });
+                const subtask = task.subtasks[subtaskIndex];
+                document.getElementById('taskInput').value = subtask.text;
+                document.getElementById('dueDate').value = subtask.dueDate || '';
+                document.getElementById('priority').value = subtask.priority || '';
+                document.getElementById('actionButton').textContent = 'Salvar Subtarefa';
+                editingTaskKey = null; // Não estamos editando a tarefa principal
+                editingSubtask = { parentKey, index: subtaskIndex };
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }, { onlyOnce: true });
         }
 
@@ -353,25 +379,6 @@
                 }).catch((error) => {
                     document.getElementById('error').textContent = "Erro ao excluir subtarefa: " + error.message;
                 });
-            }, { onlyOnce: true });
-        }
-
-        function editSubtask(parentKey, subtaskIndex) {
-            const taskRef = ref(db, `tasks/${parentKey}`);
-            onValue(taskRef, (snapshot) => {
-                const task = snapshot.val();
-                const subtasks = task.subtasks || [];
-                const currentSubtask = subtasks[subtaskIndex];
-                const newText = prompt("Digite o novo texto da subtarefa:", currentSubtask.text);
-                if (newText && newText.trim() !== '') {
-                    subtasks[subtaskIndex].text = newText.trim();
-                    update(taskRef, { subtasks }).then(() => {
-                        document.getElementById('success').textContent = "Subtarefa editada com sucesso!";
-                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
-                    }).catch((error) => {
-                        document.getElementById('error').textContent = "Erro ao editar subtarefa: " + error.message;
-                    });
-                }
             }, { onlyOnce: true });
         }
 
@@ -539,11 +546,12 @@
                         task.subtasks.forEach((subtask, index) => {
                             const subLi = document.createElement('li');
                             subLi.className = `subtask ${subtask.completed ? 'completed' : ''}`;
+                            const isSubtaskBoldItalic = isPastDue(subtask.dueDate, subtask.completed);
                             subLi.innerHTML = `
                                 <div class="task-row">
                                     <span class="expand-placeholder"></span>
                                     <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
-                                    <span class="task-text">${subtask.text}</span>
+                                    <span class="task-text ${isSubtaskBoldItalic ? 'bold-italic' : ''}">${subtask.text} | Data: ${formatDate(subtask.dueDate)} | Prioridade: ${subtask.priority}</span>
                                     <button class="edit-btn">Editar</button>
                                     <button class="delete-btn">Excluir</button>
                                     ${subtask.notes && subtask.notes.trim() !== '' ? '<span class="has-notes">(Contém Nota)</span>' : ''}
@@ -661,20 +669,20 @@
         // Adiciona evento de "Enter" nos campos de entrada
         document.getElementById('taskInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                e.preventDefault(); // Evita quebra de linha no input
-                saveTask(); // Chama a função de salvar
+                e.preventDefault();
+                saveTask();
             }
         });
         document.getElementById('dueDate').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                saveTask(); // Chama a função de salvar
+                saveTask();
             }
         });
         document.getElementById('priority').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                saveTask(); // Chama a função de salvar
+                saveTask();
             }
         });
     </script>
