@@ -214,7 +214,7 @@
         console.log("Firebase conectado com sucesso!");
 
         // Função para salvar ou atualizar tarefa/subtarefa
-        function saveTask() {
+        function saveTask(taskElement = null) {
             const taskInput = document.getElementById('taskInput');
             const dueDateInput = document.getElementById('dueDate');
             const priorityInput = document.getElementById('priority');
@@ -244,12 +244,17 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa atualizada com sucesso!";
-                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                        setTimeout(() => {
+                            document.getElementById('success').textContent = '';
+                            if (taskElement) {
+                                taskElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 2000);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
-            } else if (editingTaskKey) {
+            } else if (editingTaskKey && !editingSubtask) {
                 // Editando uma tarefa principal
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -265,28 +270,62 @@
                     }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                        setTimeout(() => {
+                            document.getElementById('success').textContent = '';
+                            if (taskElement) {
+                                taskElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            }
+                        }, 2000);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
                 }, { onlyOnce: true });
             } else {
-                // Adicionando uma nova tarefa principal
-                push(tasksRef, {
-                    text: taskText,
-                    dueDate: dueDate,
-                    priority: Math.min(Math.max(priority, 1), 1000),
-                    notes: "",
-                    completed: false,
-                    category: currentCategory,
-                    subtasks: []
-                }).then(() => {
-                    resetForm();
-                    document.getElementById('success').textContent = "Tarefa adicionada com sucesso!";
-                    setTimeout(() => document.getElementById('success').textContent = '', 2000);
-                }).catch((error) => {
-                    document.getElementById('error').textContent = "Erro ao adicionar: " + error.message;
-                });
+                // Adicionando uma nova tarefa principal ou subtarefa
+                if (editingTaskKey) {
+                    // Adicionando uma subtarefa
+                    const taskRef = ref(db, `tasks/${editingTaskKey}`);
+                    onValue(taskRef, (snapshot) => {
+                        const task = snapshot.val();
+                        const subtasks = task.subtasks || [];
+                        subtasks.push({
+                            text: taskText,
+                            dueDate: dueDate,
+                            priority: Math.min(Math.max(priority, 1), 1000),
+                            notes: "",
+                            completed: false
+                        });
+                        update(taskRef, { subtasks }).then(() => {
+                            resetForm();
+                            document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
+                            setTimeout(() => {
+                                document.getElementById('success').textContent = '';
+                                if (taskElement) {
+                                    taskElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                                }
+                            }, 2000);
+                        }).catch((error) => {
+                            document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
+                        });
+                    }, { onlyOnce: true });
+                } else {
+                    // Adicionando uma nova tarefa principal
+                    push(tasksRef, {
+                        text: taskText,
+                        dueDate: dueDate,
+                        priority: Math.min(Math.max(priority, 1), 1000),
+                        notes: "",
+                        completed: false,
+                        category: currentCategory,
+                        subtasks: []
+                    }).then(() => {
+                        resetForm();
+                        document.getElementById('success').textContent = "Tarefa adicionada com sucesso!";
+                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                    }).catch((error) => {
+                        document.getElementById('error').textContent = "Erro ao adicionar: " + error.message;
+                    });
+                }
             }
         }
 
@@ -303,6 +342,7 @@
 
         // Função para editar tarefa principal
         function editTask(key) {
+            const taskElement = document.querySelector(`li[data-key="${key}"]`);
             const taskRef = ref(db, `tasks/${key}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
@@ -318,6 +358,7 @@
 
         // Função para adicionar subtarefa
         function addSubtask(parentKey) {
+            const taskElement = document.querySelector(`li[data-key="${parentKey}"]`);
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
             document.getElementById('priority').value = '';
@@ -329,6 +370,7 @@
 
         // Função para editar subtarefa
         function editSubtask(parentKey, subtaskIndex) {
+            const taskElement = document.querySelector(`li[data-key="${parentKey}"]`);
             const taskRef = ref(db, `tasks/${parentKey}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
@@ -511,6 +553,7 @@
 
                 taskArray.forEach(([key, task]) => {
                     const li = document.createElement('li');
+                    li.setAttribute('data-key', key); // Adiciona um atributo para identificar o elemento
                     li.className = task.completed ? 'completed' : '';
                     const isTaskBoldItalic = isPastDue(task.dueDate, task.completed);
                     const hasSubtasks = task.subtasks && task.subtasks.length > 0;
@@ -633,7 +676,7 @@
                             e.stopPropagation();
                             toggleNotes(li);
                         });
-                    }
+                    });
                     li.querySelector('textarea').addEventListener('change', (e) => updateNotes(key, e.target));
                     li.querySelector('textarea').addEventListener('click', (e) => e.stopPropagation());
 
@@ -664,25 +707,35 @@
         document.getElementById('allBtn').addEventListener('click', () => setCategory('all'));
 
         // Vincula o evento ao botão de ação
-        document.getElementById('actionButton').addEventListener('click', saveTask);
+        document.getElementById('actionButton').addEventListener('click', () => {
+            const key = editingSubtask ? editingSubtask.parentKey : editingTaskKey;
+            const taskElement = key ? document.querySelector(`li[data-key="${key}"]`) : null;
+            saveTask(taskElement);
+        });
 
         // Adiciona evento de "Enter" nos campos de entrada
         document.getElementById('taskInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                saveTask();
+                const key = editingSubtask ? editingSubtask.parentKey : editingTaskKey;
+                const taskElement = key ? document.querySelector(`li[data-key="${key}"]`) : null;
+                saveTask(taskElement);
             }
         });
         document.getElementById('dueDate').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                saveTask();
+                const key = editingSubtask ? editingSubtask.parentKey : editingTaskKey;
+                const taskElement = key ? document.querySelector(`li[data-key="${key}"]`) : null;
+                saveTask(taskElement);
             }
         });
         document.getElementById('priority').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault();
-                saveTask();
+                const key = editingSubtask ? editingSubtask.parentKey : editingTaskKey;
+                const taskElement = key ? document.querySelector(`li[data-key="${key}"]`) : null;
+                saveTask(taskElement);
             }
         });
     </script>
