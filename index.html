@@ -136,27 +136,16 @@
         }
         .expand-btn {
             font-size: 18px;
-            padding: 0; /* Remove padding padrão */
-            margin: 0 10px 0 0; /* Margem apenas à direita */
-            width: 40px; /* Espaço fixo para o botão */
-            height: 40px; /* Altura fixa para consistência */
-            line-height: 40px; /* Centraliza o texto verticalmente */
-            text-align: center;
+            padding: 5px 10px;
             cursor: pointer;
-            background: none; /* Remove fundo para consistência */
-            border: none; /* Remove borda para evitar diferenças */
-            box-sizing: border-box;
-        }
-        .expand-placeholder {
-            width: 40px; /* Espaço reservado quando não há botão */
-            height: 40px; /* Altura fixa para consistência */
-            margin: 0 10px 0 0; /* Margem apenas à direita */
-            display: inline-block; /* Garante comportamento como bloco */
+            background: none;
+            border: none;
+            color: #e0e0e0;
         }
         .task-row input[type="checkbox"] {
-            margin: 0; /* Remove margem padrão do checkbox */
-            width: 20px; /* Tamanho fixo para alinhamento */
-            height: 20px; /* Altura fixa para consistência */
+            width: 18px; /* Tamanho fixo para todos os checkboxes */
+            height: 18px; /* Tamanho fixo para todos os checkboxes */
+            margin: 0 10px 0 0; /* Margem consistente à direita, sem margem à esquerda */
         }
         .subtasks-container {
             display: none; /* Inicialmente oculto */
@@ -505,7 +494,7 @@
 
                     li.innerHTML = `
                         <div class="task-row">
-                            ${hasSubtasks ? `<button class="expand-btn">${expandedTasks[key] ? '−' : '+'}</button>` : '<span class="expand-placeholder"></span>'}
+                            ${hasSubtasks ? `<button class="expand-btn">${expandedTasks[key] ? '−' : '+'}</button>` : ''}
                             <input type="checkbox" ${task.completed ? 'checked' : ''}>
                             <span class="task-text ${isTaskBoldItalic ? 'bold-italic' : ''}">${task.text} | Data: ${formatDate(task.dueDate)} | Prioridade: ${task.priority}</span>
                             <div class="category-dropdown">
@@ -536,7 +525,6 @@
                             subLi.className = `subtask ${subtask.completed ? 'completed' : ''}`;
                             subLi.innerHTML = `
                                 <div class="task-row">
-                                    <span class="expand-placeholder"></span> <!-- Espaço reservado para alinhamento -->
                                     <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
                                     <span class="task-text">${subtask.text}</span>
                                     <button class="edit-btn">Editar</button>
