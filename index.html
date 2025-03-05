@@ -131,7 +131,7 @@
             color: #ff0000; /* Vermelho para dois dias ou mais anteriores */
         }
         .subtask {
-            margin-left: 20px; /* Indentação para subtarefas */
+            margin-left: 50px; /* Indentação de cerca de 5 espaços para subtarefas */
             background: #3a3a3a; /* Cor ligeiramente diferente para destacar */
         }
         .expand-btn {
@@ -316,6 +316,40 @@
             remove(taskRef);
         }
 
+        function deleteSubtask(parentKey, subtaskIndex) {
+            const taskRef = ref(db, `tasks/${parentKey}`);
+            onValue(taskRef, (snapshot) => {
+                const task = snapshot.val();
+                const subtasks = task.subtasks || [];
+                subtasks.splice(subtaskIndex, 1); // Remove a subtarefa no índice
+                update(taskRef, { subtasks }).then(() => {
+                    document.getElementById('success').textContent = "Subtarefa excluída com sucesso!";
+                    setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                }).catch((error) => {
+                    document.getElementById('error').textContent = "Erro ao excluir subtarefa: " + error.message;
+                });
+            }, { onlyOnce: true });
+        }
+
+        function editSubtask(parentKey, subtaskIndex) {
+            const taskRef = ref(db, `tasks/${parentKey}`);
+            onValue(taskRef, (snapshot) => {
+                const task = snapshot.val();
+                const subtasks = task.subtasks || [];
+                const currentSubtask = subtasks[subtaskIndex];
+                const newText = prompt("Digite o novo texto da subtarefa:", currentSubtask.text);
+                if (newText && newText.trim() !== '') {
+                    subtasks[subtaskIndex].text = newText.trim();
+                    update(taskRef, { subtasks }).then(() => {
+                        document.getElementById('success').textContent = "Subtarefa editada com sucesso!";
+                        setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                    }).catch((error) => {
+                        document.getElementById('error').textContent = "Erro ao editar subtarefa: " + error.message;
+                    });
+                }
+            }, { onlyOnce: true });
+        }
+
         function toggleNotes(li) {
             const notesDiv = li.querySelector('.notes');
             notesDiv.classList.toggle('visible');
@@ -483,6 +517,9 @@
                                 <div class="task-row">
                                     <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
                                     <span class="task-text">${subtask.text}</span>
+                                    <button class="edit-btn">Editar</button>
+                                    <button class="delete-btn">Excluir</button>
+                                    <button class="subtask-btn">Subtarefa</button>
                                     ${subtask.notes && subtask.notes.trim() !== '' ? '<span class="has-notes">(Contém Nota)</span>' : ''}
                                 </div>
                                 <div class="notes">
@@ -494,6 +531,18 @@
                             subLi.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
                                 e.stopPropagation();
                                 toggleSubtask(key, index);
+                            });
+                            subLi.querySelector('.edit-btn').addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                editSubtask(key, index);
+                            });
+                            subLi.querySelector('.delete-btn').addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                deleteSubtask(key, index);
+                            });
+                            subLi.querySelector('.subtask-btn').addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                addSubtask(key); // Adiciona como subtarefa da tarefa principal
                             });
                             subLi.querySelector('.task-text').addEventListener('click', () => toggleNotes(subLi));
                             const subNotesIndicator = subLi.querySelector('.has-notes');
