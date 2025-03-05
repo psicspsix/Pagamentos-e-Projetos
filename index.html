@@ -177,7 +177,7 @@
             <button id="proposedBtn">Proj. Propostos</button>
             <button id="inProgressBtn">Proj. em Andamento</button>
             <button id="futureBtn">Proj. Futuros</button>
-            <button id="allBtn">Todas</button>
+            <button id="allBtn">Todos</button>
         </div>
     </div>
     <input type="text" id="taskInput" placeholder="Digite uma tarefa">
@@ -275,7 +275,7 @@
             editingTaskKey = null;
         }
 
-        // Função para editar tarefa
+        // Função para editar tarefa e rolar para o topo
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
             onValue(taskRef, (snapshot) => {
@@ -285,6 +285,8 @@
                 document.getElementById('priority').value = task.priority;
                 document.getElementById('actionButton').textContent = 'Salvar';
                 editingTaskKey = key;
+                // Rola para o topo da página
+                window.scrollTo({ top: 0, behavior: 'smooth' });
             }, { onlyOnce: true });
         }
 
@@ -656,10 +658,22 @@
         // Vincula o evento ao botão de ação
         document.getElementById('actionButton').addEventListener('click', saveTask);
 
-        // Adiciona evento de "Enter" no campo de texto
+        // Adiciona evento de "Enter" nos campos de entrada
         document.getElementById('taskInput').addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
                 e.preventDefault(); // Evita quebra de linha no input
+                saveTask(); // Chama a função de salvar
+            }
+        });
+        document.getElementById('dueDate').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                saveTask(); // Chama a função de salvar
+            }
+        });
+        document.getElementById('priority').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
                 saveTask(); // Chama a função de salvar
             }
         });
