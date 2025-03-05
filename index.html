@@ -131,13 +131,18 @@
             color: #ff0000; /* Vermelho para dois dias ou mais anteriores */
         }
         .subtask {
-            margin-left: 50px; /* Indentação de cerca de 5 espaços para subtarefas */
+            margin-left: 120px; /* Indentação de cerca de 12 espaços para subtarefas */
             background: #3a3a3a; /* Cor ligeiramente diferente para destacar */
         }
         .expand-btn {
             font-size: 18px;
             padding: 5px 10px;
             cursor: pointer;
+            width: 40px; /* Espaço fixo para o botão */
+            text-align: center;
+        }
+        .expand-placeholder {
+            width: 40px; /* Espaço reservado quando não há botão */
         }
         .subtasks-container {
             display: none; /* Inicialmente oculto */
@@ -186,6 +191,7 @@
         const tasksRef = ref(db, 'tasks');
         let editingTaskKey = null;
         let currentCategory = 'payments'; // Padrão ao entrar
+        let expandedTasks = {}; // Armazena o estado de expansão/colapso
 
         console.log("Firebase conectado com sucesso!");
 
@@ -375,11 +381,12 @@
             content.style.display = content.style.display === 'block' ? 'none' : 'block';
         }
 
-        function toggleSubtasks(li) {
+        function toggleSubtasks(key, li) {
             const subtasksContainer = li.querySelector('.subtasks-container');
             const expandBtn = li.querySelector('.expand-btn');
+            expandedTasks[key] = !expandedTasks[key]; // Alterna o estado na memória
             subtasksContainer.classList.toggle('visible');
-            expandBtn.textContent = subtasksContainer.classList.contains('visible') ? '−' : '+';
+            expandBtn.textContent = expandedTasks[key] ? '−' : '+';
         }
 
         function changeCategory(key, newCategory) {
@@ -484,7 +491,7 @@
 
                     li.innerHTML = `
                         <div class="task-row">
-                            ${hasSubtasks ? `<button class="expand-btn">+</button>` : '<span style="width: 30px;"></span>'}
+                            ${hasSubtasks ? `<button class="expand-btn">${expandedTasks[key] ? '−' : '+'}</button>` : '<span class="expand-placeholder"></span>'}
                             <input type="checkbox" ${task.completed ? 'checked' : ''}>
                             <span class="task-text ${isTaskBoldItalic ? 'bold-italic' : ''}">${task.text} | Data: ${formatDate(task.dueDate)} | Prioridade: ${task.priority}</span>
                             <div class="category-dropdown">
@@ -504,7 +511,7 @@
                         <div class="notes">
                             <textarea rows="3">${task.notes || ''}</textarea>
                         </div>
-                        <div class="subtasks-container"></div>
+                        <div class="subtasks-container ${expandedTasks[key] ? 'visible' : ''}"></div>
                     `;
 
                     // Renderiza subtarefas
@@ -515,11 +522,11 @@
                             subLi.className = `subtask ${subtask.completed ? 'completed' : ''}`;
                             subLi.innerHTML = `
                                 <div class="task-row">
+                                    <span class="expand-placeholder"></span> <!-- Espaço reservado para alinhamento -->
                                     <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
                                     <span class="task-text">${subtask.text}</span>
                                     <button class="edit-btn">Editar</button>
                                     <button class="delete-btn">Excluir</button>
-                                    <button class="subtask-btn">Subtarefa</button>
                                     ${subtask.notes && subtask.notes.trim() !== '' ? '<span class="has-notes">(Contém Nota)</span>' : ''}
                                 </div>
                                 <div class="notes">
@@ -540,10 +547,6 @@
                                 e.stopPropagation();
                                 deleteSubtask(key, index);
                             });
-                            subLi.querySelector('.subtask-btn').addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                addSubtask(key); // Adiciona como subtarefa da tarefa principal
-                            });
                             subLi.querySelector('.task-text').addEventListener('click', () => toggleNotes(subLi));
                             const subNotesIndicator = subLi.querySelector('.has-notes');
                             if (subNotesIndicator) {
@@ -561,7 +564,7 @@
                     if (hasSubtasks) {
                         li.querySelector('.expand-btn').addEventListener('click', (e) => {
                             e.stopPropagation();
-                            toggleSubtasks(li);
+                            toggleSubtasks(key, li);
                         });
                     }
                     li.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
