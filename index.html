@@ -130,6 +130,21 @@
         .date-two-plus-days-past {
             color: #ff0000; /* Vermelho para dois dias ou mais anteriores */
         }
+        .subtask {
+            margin-left: 20px; /* Indentação para subtarefas */
+            background: #3a3a3a; /* Cor ligeiramente diferente para destacar */
+        }
+        .expand-btn {
+            font-size: 18px;
+            padding: 5px 10px;
+            cursor: pointer;
+        }
+        .subtasks-container {
+            display: none; /* Inicialmente oculto */
+        }
+        .subtasks-container.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -198,7 +213,8 @@
                         priority: Math.min(Math.max(priority, 1), 1000),
                         notes: currentTask.notes || "",
                         completed: currentTask.completed || false,
-                        category: currentCategory
+                        category: currentCategory,
+                        subtasks: currentTask.subtasks || []
                     }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
@@ -214,7 +230,8 @@
                     priority: Math.min(Math.max(priority, 1), 1000),
                     notes: "",
                     completed: false,
-                    category: currentCategory
+                    category: currentCategory,
+                    subtasks: []
                 }).then(() => {
                     resetForm();
                     document.getElementById('success').textContent = "Tarefa adicionada com sucesso!";
@@ -248,12 +265,49 @@
             }, { onlyOnce: true });
         }
 
+        // Função para adicionar subtarefa
+        function addSubtask(parentKey) {
+            const subtaskText = prompt("Digite o texto da subtarefa:");
+            if (!subtaskText || subtaskText.trim() === '') {
+                document.getElementById('error').textContent = "Preencha a subtarefa!";
+                return;
+            }
+
+            const taskRef = ref(db, `tasks/${parentKey}`);
+            onValue(taskRef, (snapshot) => {
+                const task = snapshot.val();
+                const newSubtask = {
+                    text: subtaskText.trim(),
+                    completed: false,
+                    notes: ""
+                };
+                const subtasks = task.subtasks || [];
+                subtasks.push(newSubtask);
+                update(taskRef, { subtasks }).then(() => {
+                    document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
+                    setTimeout(() => document.getElementById('success').textContent = '', 2000);
+                }).catch((error) => {
+                    document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
+                });
+            }, { onlyOnce: true });
+        }
+
         // Funções auxiliares
         function toggleTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
                 update(taskRef, { completed: !task.completed });
+            }, { onlyOnce: true });
+        }
+
+        function toggleSubtask(parentKey, subtaskIndex) {
+            const taskRef = ref(db, `tasks/${parentKey}`);
+            onValue(taskRef, (snapshot) => {
+                const task = snapshot.val();
+                const subtasks = task.subtasks || [];
+                subtasks[subtaskIndex].completed = !subtasks[subtaskIndex].completed;
+                update(taskRef, { subtasks });
             }, { onlyOnce: true });
         }
 
@@ -272,18 +326,34 @@
             update(taskRef, { notes: textarea.value });
         }
 
+        function updateSubtaskNotes(parentKey, subtaskIndex, textarea) {
+            const taskRef = ref(db, `tasks/${parentKey}`);
+            onValue(taskRef, (snapshot) => {
+                const task = snapshot.val();
+                const subtasks = task.subtasks || [];
+                subtasks[subtaskIndex].notes = textarea.value;
+                update(taskRef, { subtasks });
+            }, { onlyOnce: true });
+        }
+
         function toggleCategoryDropdown(dropdown) {
             const content = dropdown.querySelector('.dropdown-content');
             content.style.display = content.style.display === 'block' ? 'none' : 'block';
         }
 
-        // Função corrigida para mudar a categoria
+        function toggleSubtasks(li) {
+            const subtasksContainer = li.querySelector('.subtasks-container');
+            const expandBtn = li.querySelector('.expand-btn');
+            subtasksContainer.classList.toggle('visible');
+            expandBtn.textContent = subtasksContainer.classList.contains('visible') ? '−' : '+';
+        }
+
         function changeCategory(key, newCategory) {
             const taskRef = ref(db, `tasks/${key}`);
-            update(taskRef, { category: newCategory }) // Atualiza apenas o campo category
+            update(taskRef, { category: newCategory })
                 .then(() => {
                     console.log(`Categoria da tarefa ${key} alterada para ${newCategory}`);
-                    renderTasks(); // Re-renderiza a lista
+                    renderTasks();
                 })
                 .catch((error) => {
                     console.error("Erro ao alterar categoria:", error);
@@ -371,12 +441,16 @@
                         }
                         return b[1].priority - a[1].priority;
                     });
+
                 taskArray.forEach(([key, task]) => {
                     const li = document.createElement('li');
                     li.className = task.completed ? 'completed' : '';
                     const isTaskBoldItalic = isPastDue(task.dueDate, task.completed);
+                    const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+
                     li.innerHTML = `
                         <div class="task-row">
+                            ${hasSubtasks ? `<button class="expand-btn">+</button>` : '<span style="width: 30px;"></span>'}
                             <input type="checkbox" ${task.completed ? 'checked' : ''}>
                             <span class="task-text ${isTaskBoldItalic ? 'bold-italic' : ''}">${task.text} | Data: ${formatDate(task.dueDate)} | Prioridade: ${task.priority}</span>
                             <div class="category-dropdown">
@@ -390,12 +464,57 @@
                             </div>
                             <button class="edit-btn">Editar</button>
                             <button class="delete-btn">Excluir</button>
+                            <button class="subtask-btn">Subtarefa</button>
                             ${task.notes && task.notes.trim() !== '' ? '<span class="has-notes">(Contém Nota)</span>' : ''}
                         </div>
                         <div class="notes">
                             <textarea rows="3">${task.notes || ''}</textarea>
                         </div>
+                        <div class="subtasks-container"></div>
                     `;
+
+                    // Renderiza subtarefas
+                    const subtasksContainer = li.querySelector('.subtasks-container');
+                    if (hasSubtasks) {
+                        task.subtasks.forEach((subtask, index) => {
+                            const subLi = document.createElement('li');
+                            subLi.className = `subtask ${subtask.completed ? 'completed' : ''}`;
+                            subLi.innerHTML = `
+                                <div class="task-row">
+                                    <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
+                                    <span class="task-text">${subtask.text}</span>
+                                    ${subtask.notes && subtask.notes.trim() !== '' ? '<span class="has-notes">(Contém Nota)</span>' : ''}
+                                </div>
+                                <div class="notes">
+                                    <textarea rows="3">${subtask.notes || ''}</textarea>
+                                </div>
+                            `;
+                            subtasksContainer.appendChild(subLi);
+
+                            subLi.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                toggleSubtask(key, index);
+                            });
+                            subLi.querySelector('.task-text').addEventListener('click', () => toggleNotes(subLi));
+                            const subNotesIndicator = subLi.querySelector('.has-notes');
+                            if (subNotesIndicator) {
+                                subNotesIndicator.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    toggleNotes(subLi);
+                                });
+                            }
+                            subLi.querySelector('textarea').addEventListener('change', (e) => updateSubtaskNotes(key, index, e.target));
+                            subLi.querySelector('textarea').addEventListener('click', (e) => e.stopPropagation());
+                        });
+                    }
+
+                    // Eventos da tarefa principal
+                    if (hasSubtasks) {
+                        li.querySelector('.expand-btn').addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            toggleSubtasks(li);
+                        });
+                    }
                     li.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
                         e.stopPropagation();
                         toggleTask(key);
@@ -413,7 +532,7 @@
                             changeCategory(key, newCategory);
                             const dropdownContent = item.closest('.dropdown-content');
                             if (dropdownContent) {
-                                dropdownContent.style.display = 'none'; // Fecha o dropdown específico
+                                dropdownContent.style.display = 'none';
                             }
                         });
                     });
@@ -425,6 +544,10 @@
                         e.stopPropagation();
                         deleteTask(key);
                     });
+                    li.querySelector('.subtask-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        addSubtask(key);
+                    });
                     const notesIndicator = li.querySelector('.has-notes');
                     if (notesIndicator) {
                         notesIndicator.addEventListener('click', (e) => {
@@ -434,8 +557,10 @@
                     }
                     li.querySelector('textarea').addEventListener('change', (e) => updateNotes(key, e.target));
                     li.querySelector('textarea').addEventListener('click', (e) => e.stopPropagation());
+
                     taskList.appendChild(li);
                 });
+
                 // Fecha dropdowns ao clicar fora
                 document.addEventListener('click', (e) => {
                     if (!e.target.closest('.category-dropdown')) {
@@ -461,7 +586,6 @@
 
         // Vincula o evento ao botão de ação
         document.getElementById('actionButton').addEventListener('click', saveTask);
-
     </script>
 </body>
 </html>
