@@ -81,9 +81,34 @@
         let addingSubtaskToKey = null;
         let currentCategory = 'payments';
         let expandedTasks = {};
-        let targetScrollPosition = 0;
+        let tempTaskId = null;
 
         console.log("Firebase conectado com sucesso!");
+
+        function scrollToTarget(key) {
+            renderTasks(); // Renderiza a lista imediatamente
+            let element;
+            if (tempTaskId) {
+                element = document.querySelector(`li[data-temp-id="${tempTaskId}"]`);
+                if (element) element.removeAttribute('data-temp-id'); // Remove o ID temporário após encontrar
+            } else {
+                element = document.querySelector(`li[data-key="${key}"]`);
+            }
+            if (element) {
+                document.getElementById('success').textContent = '';
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                const subtasksContainer = element.querySelector('.subtasks-container');
+                const expandBtn = element.querySelector('.expand-btn');
+                if (subtasksContainer && expandBtn) {
+                    subtasksContainer.classList.add('visible');
+                    expandBtn.textContent = '−';
+                    expandedTasks[key] = true;
+                }
+            } else {
+                console.log(`Elemento com data-key="${key}" ou data-temp-id="${tempTaskId}" não encontrado para rolagem`);
+            }
+            tempTaskId = null; // Reseta o ID temporário
+        }
 
         function saveTask(taskKey = null) {
             const taskInput = document.getElementById('taskInput');
@@ -110,24 +135,6 @@
                 return true;
             };
 
-            const scrollBack = (key) => {
-                renderTasks(); // Renderiza a lista
-                setTimeout(() => {
-                    window.scrollTo({ top: targetScrollPosition, behavior: 'smooth' });
-                    const element = document.querySelector(`li[data-key="${key}"]`);
-                    if (element) {
-                        const subtasksContainer = element.querySelector('.subtasks-container');
-                        const expandBtn = element.querySelector('.expand-btn');
-                        if (subtasksContainer && expandBtn) {
-                            subtasksContainer.classList.add('visible');
-                            expandBtn.textContent = '−';
-                            expandedTasks[key] = true;
-                        }
-                    }
-                    document.getElementById('success').textContent = '';
-                }, 300); // Pequeno atraso para garantir que o DOM esteja pronto
-            };
-
             if (editingSubtask) {
                 const { parentKey, index } = editingSubtask;
                 const taskRef = ref(db, `tasks/${parentKey}`);
@@ -146,7 +153,7 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa atualizada com sucesso!";
-                        scrollBack(parentKey);
+                        scrollToTarget(parentKey);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar subtarefa: " + error.message;
                     });
@@ -168,7 +175,7 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        scrollBack(addingSubtaskToKey);
+                        scrollToTarget(addingSubtaskToKey);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
@@ -189,7 +196,7 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        scrollBack(editingTaskKey);
+                        scrollToTarget(editingTaskKey);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
@@ -206,7 +213,7 @@
                 }).then((newTaskRef) => {
                     resetForm();
                     document.getElementById('success').textContent = "Tarefa adicionada com sucesso!";
-                    scrollBack(newTaskRef.key);
+                    scrollToTarget(newTaskRef.key);
                 }).catch((error) => {
                     document.getElementById('error').textContent = "Erro ao adicionar: " + error.message;
                 });
@@ -222,14 +229,15 @@
             editingTaskKey = null;
             editingSubtask = null;
             addingSubtaskToKey = null;
-            targetScrollPosition = 0;
+            tempTaskId = null;
         }
 
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
             const element = document.querySelector(`li[data-key="${key}"]`);
             if (element) {
-                targetScrollPosition = element.getBoundingClientRect().top + window.scrollY;
+                tempTaskId = 'temp-' + Date.now(); // Gera um ID temporário único
+                element.setAttribute('data-temp-id', tempTaskId);
             }
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
@@ -248,7 +256,8 @@
         function addSubtask(parentKey) {
             const element = document.querySelector(`li[data-key="${parentKey}"]`);
             if (element) {
-                targetScrollPosition = element.getBoundingClientRect().top + window.scrollY;
+                tempTaskId = 'temp-' + Date.now(); // Gera um ID temporário único
+                element.setAttribute('data-temp-id', tempTaskId);
             }
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
@@ -262,10 +271,6 @@
         }
 
         function editSubtask(parentKey, subtaskIndex) {
-            const element = document.querySelector(`li[data-key="${parentKey}"]`);
-            if (element) {
-                targetScrollPosition = element.getBoundingClientRect().top + window.scrollY;
-            }
             const taskRef = ref(db, `tasks/${parentKey}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
