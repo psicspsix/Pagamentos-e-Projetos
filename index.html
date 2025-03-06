@@ -86,11 +86,11 @@
         console.log("Firebase conectado com sucesso!");
 
         function scrollToTarget(key) {
-            console.log(`Tentando rolar para a tarefa com chave: ${key}`);
-            renderTasks(); // Renderiza a lista imediatamente
+            console.log(`Tentando rolar para: ${key}`);
+            renderTasks();
             const element = document.querySelector(`li[data-key="${key}"]`);
             if (element) {
-                console.log(`Elemento encontrado para chave ${key}, rolando...`);
+                console.log(`Elemento encontrado: ${key}`);
                 document.getElementById('success').textContent = '';
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 const subtasksContainer = element.querySelector('.subtasks-container');
@@ -101,7 +101,7 @@
                     expandedTasks[key] = true;
                 }
             } else {
-                console.log(`Elemento com data-key="${key}" NÃO encontrado para rolagem`);
+                console.log(`Elemento NÃO encontrado: ${key}`);
             }
         }
 
@@ -130,7 +130,6 @@
                 return true;
             };
 
-            // Mantém o comportamento funcional para "Edição de Subtarefa"
             if (editingSubtask) {
                 const { parentKey, index } = editingSubtask;
                 const taskRef = ref(db, `tasks/${parentKey}`);
@@ -155,7 +154,6 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Nova lógica para "Adição de Subtarefa"
             else if (addingSubtaskToKey) {
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -173,14 +171,10 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        console.log(`Subtarefa adicionada, targetTaskKey: ${targetTaskKey}`);
-                        // Verifica se os dados foram atualizados antes de rolar
+                        console.log(`Subtarefa adicionada, usando targetTaskKey: ${targetTaskKey}`);
                         onValue(tasksRef, (snapshot) => {
-                            const tasks = snapshot.val();
-                            if (tasks && tasks[addingSubtaskToKey] && targetTaskKey) {
+                            if (targetTaskKey) {
                                 scrollToTarget(targetTaskKey);
-                            } else {
-                                console.log("Dados não atualizados ainda ou targetTaskKey inválido");
                             }
                         }, { onlyOnce: true });
                     }).catch((error) => {
@@ -188,7 +182,6 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Nova lógica para "Edição de Tarefa"
             else if (editingTaskKey) {
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -205,14 +198,10 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        console.log(`Tarefa editada, targetTaskKey: ${targetTaskKey}`);
-                        // Verifica se os dados foram atualizados antes de rolar
+                        console.log(`Tarefa editada, usando targetTaskKey: ${targetTaskKey}`);
                         onValue(tasksRef, (snapshot) => {
-                            const tasks = snapshot.val();
-                            if (tasks && tasks[editingTaskKey] && targetTaskKey) {
+                            if (targetTaskKey) {
                                 scrollToTarget(targetTaskKey);
-                            } else {
-                                console.log("Dados não atualizados ainda ou targetTaskKey inválido");
                             }
                         }, { onlyOnce: true });
                     }).catch((error) => {
@@ -220,7 +209,6 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Mantém o comportamento funcional para "Adição de Nova Tarefa"
             else {
                 push(tasksRef, {
                     text: taskText,
@@ -255,7 +243,7 @@
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
             targetTaskKey = key;
-            console.log(`Editando tarefa, targetTaskKey definido como: ${targetTaskKey}`);
+            console.log(`Editando tarefa, targetTaskKey: ${targetTaskKey}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
                 document.getElementById('taskInput').value = task.text;
@@ -272,7 +260,7 @@
 
         function addSubtask(parentKey) {
             targetTaskKey = parentKey;
-            console.log(`Adicionando subtarefa, targetTaskKey definido como: ${targetTaskKey}`);
+            console.log(`Adicionando subtarefa, targetTaskKey: ${targetTaskKey}`);
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
             document.getElementById('priority').value = '';
@@ -376,7 +364,6 @@
             const taskRef = ref(db, `tasks/${key}`);
             update(taskRef, { category: newCategory })
                 .then(() => {
-                    console.log(`Categoria da tarefa ${key} alterada para ${newCategory}`);
                     renderTasks();
                 })
                 .catch((error) => {
@@ -448,7 +435,6 @@
         function renderTasks() {
             onValue(tasksRef, (snapshot) => {
                 const tasks = snapshot.val();
-                console.log("Dados do Firebase:", tasks);
                 const taskList = document.getElementById('taskList');
                 taskList.innerHTML = tasks ? '' : '<li>Sem tarefas ainda.</li>';
                 const taskArray = Object.entries(tasks || {})
