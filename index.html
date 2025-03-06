@@ -81,19 +81,12 @@
         let addingSubtaskToKey = null;
         let currentCategory = 'payments';
         let expandedTasks = {};
-        let tempTaskId = null;
 
         console.log("Firebase conectado com sucesso!");
 
         function scrollToTarget(key) {
             renderTasks(); // Renderiza a lista imediatamente
-            let element;
-            if (tempTaskId) {
-                element = document.querySelector(`li[data-temp-id="${tempTaskId}"]`);
-                if (element) element.removeAttribute('data-temp-id'); // Remove o ID temporário após encontrar
-            } else {
-                element = document.querySelector(`li[data-key="${key}"]`);
-            }
+            const element = document.querySelector(`li[data-key="${key}"]`);
             if (element) {
                 document.getElementById('success').textContent = '';
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -105,9 +98,8 @@
                     expandedTasks[key] = true;
                 }
             } else {
-                console.log(`Elemento com data-key="${key}" ou data-temp-id="${tempTaskId}" não encontrado para rolagem`);
+                console.log(`Elemento com data-key="${key}" não encontrado para rolagem`);
             }
-            tempTaskId = null; // Reseta o ID temporário
         }
 
         function saveTask(taskKey = null) {
@@ -135,6 +127,7 @@
                 return true;
             };
 
+            // Mantém o comportamento funcional para "Edição de Subtarefa"
             if (editingSubtask) {
                 const { parentKey, index } = editingSubtask;
                 const taskRef = ref(db, `tasks/${parentKey}`);
@@ -158,7 +151,9 @@
                         document.getElementById('error').textContent = "Erro ao atualizar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
-            } else if (addingSubtaskToKey) {
+            }
+            // Corrige "Adição de Subtarefa" mantendo a tarefa pai no DOM
+            else if (addingSubtaskToKey) {
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
                     const task = snapshot.val();
@@ -175,12 +170,14 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        scrollToTarget(addingSubtaskToKey);
+                        setTimeout(() => scrollToTarget(addingSubtaskToKey), 100); // Pequeno atraso para garantir DOM
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
-            } else if (editingTaskKey) {
+            }
+            // Corrige "Edição de Tarefa" mantendo a tarefa no DOM
+            else if (editingTaskKey) {
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
                     const currentTask = snapshot.val();
@@ -196,12 +193,14 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        scrollToTarget(editingTaskKey);
+                        setTimeout(() => scrollToTarget(editingTaskKey), 100); // Pequeno atraso para garantir DOM
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
                 }, { onlyOnce: true });
-            } else {
+            }
+            // Mantém o comportamento funcional para "Adição de Nova Tarefa"
+            else {
                 push(tasksRef, {
                     text: taskText,
                     dueDate: dueDate,
@@ -229,16 +228,10 @@
             editingTaskKey = null;
             editingSubtask = null;
             addingSubtaskToKey = null;
-            tempTaskId = null;
         }
 
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
-            const element = document.querySelector(`li[data-key="${key}"]`);
-            if (element) {
-                tempTaskId = 'temp-' + Date.now(); // Gera um ID temporário único
-                element.setAttribute('data-temp-id', tempTaskId);
-            }
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
                 document.getElementById('taskInput').value = task.text;
@@ -254,11 +247,6 @@
         }
 
         function addSubtask(parentKey) {
-            const element = document.querySelector(`li[data-key="${parentKey}"]`);
-            if (element) {
-                tempTaskId = 'temp-' + Date.now(); // Gera um ID temporário único
-                element.setAttribute('data-temp-id', tempTaskId);
-            }
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
             document.getElementById('priority').value = '';
