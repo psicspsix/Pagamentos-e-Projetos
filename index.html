@@ -169,12 +169,13 @@
                         completed: false
                     });
                     update(taskRef, { subtasks }).then(() => {
+                        const scrollKey = targetTaskKey; // Armazena antes do reset
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        console.log(`Subtarefa adicionada, usando targetTaskKey: ${targetTaskKey}`);
+                        console.log(`Subtarefa adicionada, usando targetTaskKey: ${scrollKey}`);
                         onValue(tasksRef, (snapshot) => {
-                            if (targetTaskKey) {
-                                scrollToTarget(targetTaskKey);
+                            if (scrollKey) {
+                                scrollToTarget(scrollKey);
                             }
                         }, { onlyOnce: true });
                     }).catch((error) => {
@@ -196,12 +197,13 @@
                         subtasks: currentTask.subtasks || []
                     };
                     set(taskRef, updatedTask).then(() => {
+                        const scrollKey = targetTaskKey; // Armazena antes do reset
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        console.log(`Tarefa editada, usando targetTaskKey: ${targetTaskKey}`);
+                        console.log(`Tarefa editada, usando targetTaskKey: ${scrollKey}`);
                         onValue(tasksRef, (snapshot) => {
-                            if (targetTaskKey) {
-                                scrollToTarget(targetTaskKey);
+                            if (scrollKey) {
+                                scrollToTarget(scrollKey);
                             }
                         }, { onlyOnce: true });
                     }).catch((error) => {
