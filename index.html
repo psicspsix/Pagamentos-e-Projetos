@@ -98,11 +98,12 @@
             }
 
             const scrollBackAndExpand = (key) => {
-                // Garantir que o DOM esteja atualizado antes de rolar
-                setTimeout(() => {
-                    document.getElementById('success').textContent = '';
+                // Usar um intervalo para garantir que o elemento esteja no DOM
+                const checkAndScroll = setInterval(() => {
                     const element = document.querySelector(`li[data-key="${key}"]`);
                     if (element) {
+                        clearInterval(checkAndScroll);
+                        document.getElementById('success').textContent = '';
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                         const subtasksContainer = element.querySelector('.subtasks-container');
                         const expandBtn = element.querySelector('.expand-btn');
@@ -111,10 +112,9 @@
                             expandBtn.textContent = '−';
                             expandedTasks[key] = true;
                         }
-                    } else {
-                        console.log(`Elemento com data-key="${key}" não encontrado para rolagem de volta`);
                     }
-                }, 500); // Reduzi o tempo para 500ms para garantir que o DOM esteja pronto
+                }, 100); // Verifica a cada 100ms
+                setTimeout(() => clearInterval(checkAndScroll), 2000); // Para após 2 segundos se não encontrar
             };
 
             const validateSubtaskConstraints = (parentTask, newDueDate, newPriority) => {
@@ -207,7 +207,7 @@
                 }).then((newTaskRef) => {
                     resetForm();
                     document.getElementById('success').textContent = "Tarefa adicionada com sucesso!";
-                    scrollBackAndExpand(newTaskRef.key); // Usar a chave da nova tarefa
+                    scrollBackAndExpand(newTaskRef.key);
                 }).catch((error) => {
                     document.getElementById('error').textContent = "Erro ao adicionar: " + error.message;
                 });
