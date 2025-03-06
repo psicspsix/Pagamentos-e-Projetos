@@ -102,13 +102,6 @@
                     document.getElementById('success').textContent = '';
                     const element = document.querySelector(`li[data-key="${taskKey}"]`);
                     if (element) {
-                        if (addingSubtaskToKey) {
-                            expandedTasks[taskKey] = true; // Expande a tarefa ao adicionar subtarefa
-                            const subtasksContainer = element.querySelector('.subtasks-container');
-                            const expandBtn = element.querySelector('.expand-btn');
-                            if (subtasksContainer) subtasksContainer.classList.add('visible');
-                            if (expandBtn) expandBtn.textContent = '−';
-                        }
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     } else {
                         console.log(`Elemento com data-key="${taskKey}" não encontrado para rolagem de volta`);
@@ -150,8 +143,16 @@
                         completed: false
                     });
                     update(taskRef, { subtasks }).then(() => {
+                        expandedTasks[addingSubtaskToKey] = true; // Marca a tarefa como expandida
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
+                        const element = document.querySelector(`li[data-key="${addingSubtaskToKey}"]`);
+                        if (element) {
+                            const subtasksContainer = element.querySelector('.subtasks-container');
+                            const expandBtn = element.querySelector('.expand-btn');
+                            if (subtasksContainer) subtasksContainer.classList.add('visible');
+                            if (expandBtn) expandBtn.textContent = '−';
+                        }
                         scrollBack();
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
