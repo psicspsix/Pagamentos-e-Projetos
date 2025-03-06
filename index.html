@@ -169,7 +169,7 @@
                         completed: false
                     });
                     update(taskRef, { subtasks }).then(() => {
-                        const scrollKey = targetTaskKey; // Armazena antes do reset
+                        const scrollKey = targetTaskKey;
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
                         console.log(`Subtarefa adicionada, usando targetTaskKey: ${scrollKey}`);
@@ -197,7 +197,7 @@
                         subtasks: currentTask.subtasks || []
                     };
                     set(taskRef, updatedTask).then(() => {
-                        const scrollKey = targetTaskKey; // Armazena antes do reset
+                        const scrollKey = targetTaskKey;
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
                         console.log(`Tarefa editada, usando targetTaskKey: ${scrollKey}`);
@@ -434,6 +434,25 @@
             renderTasks();
         }
 
+        function getEarliestDueDate(task) {
+            let earliestDate = task.dueDate || '9999-12-31';
+            if (task.subtasks && task.subtasks.length > 0) {
+                task.subtasks.forEach(subtask => {
+                    if (subtask.dueDate && subtask.dueDate < earliestDate) {
+                        earliestDate = subtask.dueDate;
+                    }
+                });
+            }
+            return earliestDate;
+        }
+
+        function shouldExpandTask(task) {
+            if (!task.subtasks || task.subtasks.length === 0) return false;
+            const taskDueDate = task.dueDate || '9999-12-31';
+            const earliestSubtaskDate = getEarliestDueDate(task);
+            return earliestSubtaskDate < taskDueDate;
+        }
+
         function renderTasks() {
             onValue(tasksRef, (snapshot) => {
                 const tasks = snapshot.val();
@@ -445,10 +464,10 @@
                         if (a[1].completed !== b[1].completed) {
                             return a[1].completed - b[1].completed;
                         }
-                        const dateA = a[1].dueDate || '9999-12-31';
-                        const dateB = b[1].dueDate || '9999-12-31';
-                        if (dateA !== dateB) {
-                            return dateA.localeCompare(dateB);
+                        const earliestDateA = getEarliestDueDate(a[1]);
+                        const earliestDateB = getEarliestDueDate(b[1]);
+                        if (earliestDateA !== earliestDateB) {
+                            return earliestDateA.localeCompare(earliestDateB);
                         }
                         return b[1].priority - a[1].priority;
                     });
@@ -459,6 +478,11 @@
                     li.className = task.completed ? 'completed' : '';
                     const isTaskBoldItalic = isPastDue(task.dueDate, task.completed);
                     const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+                    const autoExpand = shouldExpandTask(task);
+
+                    if (autoExpand) {
+                        expandedTasks[key] = true;
+                    }
 
                     li.innerHTML = `
                         <div class="task-row">
