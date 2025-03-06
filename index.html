@@ -97,35 +97,16 @@
                 return;
             }
 
-            const scrollBackAndExpand = (key) => {
+            const scrollBack = () => {
                 setTimeout(() => {
                     document.getElementById('success').textContent = '';
-                    const element = document.querySelector(`li[data-key="${key}"]`);
+                    const element = document.querySelector(`li[data-key="${taskKey}"]`);
                     if (element) {
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                        const subtasksContainer = element.querySelector('.subtasks-container');
-                        const expandBtn = element.querySelector('.expand-btn');
-                        if (subtasksContainer && expandBtn) {
-                            subtasksContainer.classList.add('visible');
-                            expandBtn.textContent = '−';
-                            expandedTasks[key] = true;
-                        }
                     } else {
-                        console.log(`Elemento com data-key="${key}" não encontrado para rolagem de volta`);
+                        console.log(`Elemento com data-key="${taskKey}" não encontrado para rolagem de volta`);
                     }
                 }, 2000);
-            };
-
-            const validateSubtaskConstraints = (parentTask, newDueDate, newPriority) => {
-                if (newDueDate && parentTask.dueDate && newDueDate > parentTask.dueDate) {
-                    document.getElementById('error').textContent = "Data da subtarefa não pode ser posterior à da tarefa!";
-                    return false;
-                }
-                if (newPriority > parentTask.priority) {
-                    document.getElementById('error').textContent = "Prioridade da subtarefa não pode ser maior que a da tarefa!";
-                    return false;
-                }
-                return true;
             };
 
             if (editingSubtask) {
@@ -133,8 +114,6 @@
                 const taskRef = ref(db, `tasks/${parentKey}`);
                 onValue(taskRef, (snapshot) => {
                     const task = snapshot.val();
-                    if (!validateSubtaskConstraints(task, dueDate, priority)) return;
-
                     const subtasks = task.subtasks || [];
                     subtasks[index] = {
                         text: taskText,
@@ -146,7 +125,7 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa atualizada com sucesso!";
-                        scrollBackAndExpand(parentKey);
+                        scrollBack();
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar subtarefa: " + error.message;
                     });
@@ -155,8 +134,6 @@
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
                     const task = snapshot.val();
-                    if (!validateSubtaskConstraints(task, dueDate, priority)) return;
-
                     const subtasks = task.subtasks || [];
                     subtasks.push({
                         text: taskText,
@@ -166,10 +143,17 @@
                         completed: false
                     });
                     update(taskRef, { subtasks }).then(() => {
-                        expandedTasks[addingSubtaskToKey] = true;
+                        expandedTasks[addingSubtaskToKey] = true; // Marca a tarefa como expandida
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        scrollBackAndExpand(addingSubtaskToKey);
+                        const element = document.querySelector(`li[data-key="${addingSubtaskToKey}"]`);
+                        if (element) {
+                            const subtasksContainer = element.querySelector('.subtasks-container');
+                            const expandBtn = element.querySelector('.expand-btn');
+                            if (subtasksContainer) subtasksContainer.classList.add('visible');
+                            if (expandBtn) expandBtn.textContent = '−';
+                        }
+                        scrollBack();
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
@@ -189,7 +173,7 @@
                     }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        scrollBackAndExpand(editingTaskKey);
+                        scrollBack();
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
@@ -621,3 +605,4 @@
     </script>
 </body>
 </html>
+-
