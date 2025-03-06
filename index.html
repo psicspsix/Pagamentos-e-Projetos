@@ -102,6 +102,13 @@
                     document.getElementById('success').textContent = '';
                     const element = document.querySelector(`li[data-key="${taskKey}"]`);
                     if (element) {
+                        if (addingSubtaskToKey) {
+                            expandedTasks[taskKey] = true; // Expande a tarefa ao adicionar subtarefa
+                            const subtasksContainer = element.querySelector('.subtasks-container');
+                            const expandBtn = element.querySelector('.expand-btn');
+                            if (subtasksContainer) subtasksContainer.classList.add('visible');
+                            if (expandBtn) expandBtn.textContent = '−';
+                        }
                         element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                     } else {
                         console.log(`Elemento com data-key="${taskKey}" não encontrado para rolagem de volta`);
@@ -220,7 +227,7 @@
                 editingSubtask = null;
                 addingSubtaskToKey = null;
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-                setTimeout(() => document.getElementById('taskInput').focus(), 300); // Pequeno atraso para garantir o foco após a rolagem
+                setTimeout(() => document.getElementById('taskInput').focus(), 300);
             }, { onlyOnce: true });
         }
 
