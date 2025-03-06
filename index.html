@@ -81,12 +81,13 @@
         let addingSubtaskToKey = null;
         let currentCategory = 'payments';
         let expandedTasks = {};
+        let targetElement = null;
 
         console.log("Firebase conectado com sucesso!");
 
         function scrollToTarget(key) {
             renderTasks(); // Renderiza a lista imediatamente
-            const element = document.querySelector(`li[data-key="${key}"]`);
+            const element = targetElement || document.querySelector(`li[data-key="${key}"]`);
             if (element) {
                 document.getElementById('success').textContent = '';
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -100,6 +101,7 @@
             } else {
                 console.log(`Elemento com data-key="${key}" não encontrado para rolagem`);
             }
+            targetElement = null; // Reseta após uso
         }
 
         function saveTask(taskKey = null) {
@@ -127,7 +129,7 @@
                 return true;
             };
 
-            // Mantém o comportamento funcional para "Edição de Subtarefa" (sem atraso adicional)
+            // Mantém o comportamento funcional para "Edição de Subtarefa" (sem alterações)
             if (editingSubtask) {
                 const { parentKey, index } = editingSubtask;
                 const taskRef = ref(db, `tasks/${parentKey}`);
@@ -152,7 +154,7 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Aumenta o atraso para "Adição de Subtarefa" para 2000ms
+            // Usa targetElement para "Adição de Subtarefa" com atraso de 500ms
             else if (addingSubtaskToKey) {
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -170,13 +172,13 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        setTimeout(() => scrollToTarget(addingSubtaskToKey), 2000); // Atraso de 2 segundos
+                        setTimeout(() => scrollToTarget(addingSubtaskToKey), 500);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
             }
-            // Aumenta o atraso para "Edição de Tarefa" para 2000ms
+            // Usa targetElement para "Edição de Tarefa" com atraso de 500ms
             else if (editingTaskKey) {
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -193,13 +195,13 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        setTimeout(() => scrollToTarget(editingTaskKey), 2000); // Atraso de 2 segundos
+                        setTimeout(() => scrollToTarget(editingTaskKey), 500);
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
                 }, { onlyOnce: true });
             }
-            // Mantém o comportamento funcional para "Adição de Nova Tarefa" (sem atraso adicional)
+            // Mantém o comportamento funcional para "Adição de Nova Tarefa" (sem alterações)
             else {
                 push(tasksRef, {
                     text: taskText,
@@ -228,10 +230,12 @@
             editingTaskKey = null;
             editingSubtask = null;
             addingSubtaskToKey = null;
+            targetElement = null;
         }
 
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
+            targetElement = document.querySelector(`li[data-key="${key}"]`); // Armazena o elemento antes da edição
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
                 document.getElementById('taskInput').value = task.text;
@@ -247,6 +251,7 @@
         }
 
         function addSubtask(parentKey) {
+            targetElement = document.querySelector(`li[data-key="${parentKey}"]`); // Armazena o elemento antes da adição
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
             document.getElementById('priority').value = '';
