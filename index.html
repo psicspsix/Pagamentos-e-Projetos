@@ -81,14 +81,16 @@
         let addingSubtaskToKey = null;
         let currentCategory = 'payments';
         let expandedTasks = {};
-        let targetTaskKey = null; // Nova variável para armazenar a chave da tarefa alvo
+        let targetTaskKey = null;
 
         console.log("Firebase conectado com sucesso!");
 
         function scrollToTarget(key) {
+            console.log(`Tentando rolar para a tarefa com chave: ${key}`);
             renderTasks(); // Renderiza a lista imediatamente
             const element = document.querySelector(`li[data-key="${key}"]`);
             if (element) {
+                console.log(`Elemento encontrado para chave ${key}, rolando...`);
                 document.getElementById('success').textContent = '';
                 element.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 const subtasksContainer = element.querySelector('.subtasks-container');
@@ -99,7 +101,7 @@
                     expandedTasks[key] = true;
                 }
             } else {
-                console.log(`Elemento com data-key="${key}" não encontrado para rolagem`);
+                console.log(`Elemento com data-key="${key}" NÃO encontrado para rolagem`);
             }
         }
 
@@ -153,7 +155,7 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Nova lógica para "Adição de Subtarefa" usando targetTaskKey
+            // Nova lógica para "Adição de Subtarefa"
             else if (addingSubtaskToKey) {
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -171,15 +173,22 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        if (targetTaskKey) {
-                            scrollToTarget(targetTaskKey); // Usa a chave armazenada
-                        }
+                        console.log(`Subtarefa adicionada, targetTaskKey: ${targetTaskKey}`);
+                        // Verifica se os dados foram atualizados antes de rolar
+                        onValue(tasksRef, (snapshot) => {
+                            const tasks = snapshot.val();
+                            if (tasks && tasks[addingSubtaskToKey] && targetTaskKey) {
+                                scrollToTarget(targetTaskKey);
+                            } else {
+                                console.log("Dados não atualizados ainda ou targetTaskKey inválido");
+                            }
+                        }, { onlyOnce: true });
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
             }
-            // Nova lógica para "Edição de Tarefa" usando targetTaskKey
+            // Nova lógica para "Edição de Tarefa"
             else if (editingTaskKey) {
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -196,9 +205,16 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        if (targetTaskKey) {
-                            scrollToTarget(targetTaskKey); // Usa a chave armazenada
-                        }
+                        console.log(`Tarefa editada, targetTaskKey: ${targetTaskKey}`);
+                        // Verifica se os dados foram atualizados antes de rolar
+                        onValue(tasksRef, (snapshot) => {
+                            const tasks = snapshot.val();
+                            if (tasks && tasks[editingTaskKey] && targetTaskKey) {
+                                scrollToTarget(targetTaskKey);
+                            } else {
+                                console.log("Dados não atualizados ainda ou targetTaskKey inválido");
+                            }
+                        }, { onlyOnce: true });
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
@@ -233,12 +249,13 @@
             editingTaskKey = null;
             editingSubtask = null;
             addingSubtaskToKey = null;
-            targetTaskKey = null; // Reseta a chave alvo
+            targetTaskKey = null;
         }
 
         function editTask(key) {
             const taskRef = ref(db, `tasks/${key}`);
-            targetTaskKey = key; // Armazena a chave da tarefa no clique do botão "Editar"
+            targetTaskKey = key;
+            console.log(`Editando tarefa, targetTaskKey definido como: ${targetTaskKey}`);
             onValue(taskRef, (snapshot) => {
                 const task = snapshot.val();
                 document.getElementById('taskInput').value = task.text;
@@ -254,7 +271,8 @@
         }
 
         function addSubtask(parentKey) {
-            targetTaskKey = parentKey; // Armazena a chave da tarefa no clique do botão "Subtarefa"
+            targetTaskKey = parentKey;
+            console.log(`Adicionando subtarefa, targetTaskKey definido como: ${targetTaskKey}`);
             document.getElementById('taskInput').value = '';
             document.getElementById('dueDate').value = '';
             document.getElementById('priority').value = '';
