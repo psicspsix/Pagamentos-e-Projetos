@@ -127,7 +127,7 @@
                 return true;
             };
 
-            // Mantém o comportamento funcional para "Edição de Subtarefa"
+            // Mantém o comportamento funcional para "Edição de Subtarefa" (sem atraso adicional)
             if (editingSubtask) {
                 const { parentKey, index } = editingSubtask;
                 const taskRef = ref(db, `tasks/${parentKey}`);
@@ -152,7 +152,7 @@
                     });
                 }, { onlyOnce: true });
             }
-            // Corrige "Adição de Subtarefa" mantendo a tarefa pai no DOM
+            // Aumenta o atraso para "Adição de Subtarefa" para 2000ms
             else if (addingSubtaskToKey) {
                 const taskRef = ref(db, `tasks/${addingSubtaskToKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -170,13 +170,13 @@
                     update(taskRef, { subtasks }).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Subtarefa adicionada com sucesso!";
-                        setTimeout(() => scrollToTarget(addingSubtaskToKey), 100); // Pequeno atraso para garantir DOM
+                        setTimeout(() => scrollToTarget(addingSubtaskToKey), 2000); // Atraso de 2 segundos
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao adicionar subtarefa: " + error.message;
                     });
                 }, { onlyOnce: true });
             }
-            // Corrige "Edição de Tarefa" mantendo a tarefa no DOM
+            // Aumenta o atraso para "Edição de Tarefa" para 2000ms
             else if (editingTaskKey) {
                 const taskRef = ref(db, `tasks/${editingTaskKey}`);
                 onValue(taskRef, (snapshot) => {
@@ -193,13 +193,13 @@
                     set(taskRef, updatedTask).then(() => {
                         resetForm();
                         document.getElementById('success').textContent = "Tarefa atualizada com sucesso!";
-                        setTimeout(() => scrollToTarget(editingTaskKey), 100); // Pequeno atraso para garantir DOM
+                        setTimeout(() => scrollToTarget(editingTaskKey), 2000); // Atraso de 2 segundos
                     }).catch((error) => {
                         document.getElementById('error').textContent = "Erro ao atualizar: " + error.message;
                     });
                 }, { onlyOnce: true });
             }
-            // Mantém o comportamento funcional para "Adição de Nova Tarefa"
+            // Mantém o comportamento funcional para "Adição de Nova Tarefa" (sem atraso adicional)
             else {
                 push(tasksRef, {
                     text: taskText,
