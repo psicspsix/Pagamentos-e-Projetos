@@ -511,14 +511,26 @@
 
                     const subtasksContainer = li.querySelector('.subtasks-container');
                     if (hasSubtasks) {
-                        task.subtasks.forEach((subtask, index) => {
+                        const sortedSubtasks = [...task.subtasks].sort((a, b) => {
+                            if (a.completed !== b.completed) {
+                                return a.completed - b.completed;
+                            }
+                            const dateA = a.dueDate || '9999-12-31';
+                            const dateB = b.dueDate || '9999-12-31';
+                            if (dateA !== dateB) {
+                                return dateA.localeCompare(dateB);
+                            }
+                            return b.priority - a.priority;
+                        });
+
+                        sortedSubtasks.forEach((subtask) => {
                             const subLi = document.createElement('li');
                             subLi.className = `subtask ${subtask.completed ? 'completed' : ''}`;
                             const isSubtaskBoldItalic = isPastDue(subtask.dueDate, subtask.completed);
                             subLi.innerHTML = `
                                 <div class="task-row">
                                     <span class="expand-placeholder"></span>
-                                    <input type="checkbox" ${subtask.completed ? 'checked' : ''}>
+                                    <span class="checkbox-placeholder"></span>
                                     <span class="task-text ${isSubtaskBoldItalic ? 'bold-italic' : ''}">${subtask.text} | Data: ${formatDate(subtask.dueDate)} | Prioridade: ${subtask.priority}</span>
                                     <button class="edit-btn">Editar</button>
                                     <button class="delete-btn">Excluir</button>
@@ -529,18 +541,32 @@
                                 </div>
                             `;
                             subtasksContainer.appendChild(subLi);
+                        });
 
-                            subLi.querySelector('input[type="checkbox"]').addEventListener('click', (e) => {
+                        // Adicionar checkboxes após renderização
+                        const subtaskElements = subtasksContainer.querySelectorAll('.subtask');
+                        subtaskElements.forEach((subLi, index) => {
+                            const originalIndex = task.subtasks.findIndex(st => 
+                                st.text === sortedSubtasks[index].text && 
+                                st.dueDate === sortedSubtasks[index].dueDate && 
+                                st.priority === sortedSubtasks[index].priority
+                            );
+                            const checkbox = document.createElement('input');
+                            checkbox.type = 'checkbox';
+                            checkbox.checked = sortedSubtasks[index].completed;
+                            checkbox.addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                toggleSubtask(key, index);
+                                toggleSubtask(key, originalIndex);
                             });
+                            subLi.querySelector('.checkbox-placeholder').replaceWith(checkbox);
+
                             subLi.querySelector('.edit-btn').addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                editSubtask(key, index);
+                                editSubtask(key, originalIndex);
                             });
                             subLi.querySelector('.delete-btn').addEventListener('click', (e) => {
                                 e.stopPropagation();
-                                deleteSubtask(key, index);
+                                deleteSubtask(key, originalIndex);
                             });
                             subLi.querySelector('.task-text').addEventListener('click', () => toggleNotes(subLi));
                             const subNotesIndicator = subLi.querySelector('.has-notes');
@@ -550,7 +576,9 @@
                                     toggleNotes(subLi);
                                 });
                             }
-                            subLi.querySelector('textarea').addEventListener('change', (e) => updateSubtaskNotes(key, index, e.target));
+                            subLi.querySelector('textarea').addEventListener('change', (e) => {
+                                updateSubtaskNotes(key, originalIndex, e.target);
+                            });
                             subLi.querySelector('textarea').addEventListener('click', (e) => e.stopPropagation());
                         });
                     }
